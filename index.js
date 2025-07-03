@@ -8,6 +8,7 @@ const loginPage = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订阅管理系统</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle fill='%23667eea' cx='32' cy='32' r='32'/%3E%3Crect x='16' y='28' width='32' height='20' rx='4' fill='white'/%3E%3Crect x='24' y='20' width='16' height='8' rx='2' fill='white'/%3E%3Crect x='28' y='36' width='8' height='8' rx='2' fill='%23667eea'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
@@ -116,6 +117,7 @@ const adminPage = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订阅管理系统</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle fill='%23667eea' cx='32' cy='32' r='32'/%3E%3Crect x='16' y='28' width='32' height='20' rx='4' fill='white'/%3E%3Crect x='24' y='20' width='16' height='8' rx='2' fill='white'/%3E%3Crect x='28' y='36' width='8' height='8' rx='2' fill='%23667eea'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
@@ -761,6 +763,7 @@ const configPage = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>系统配置 - 订阅管理系统</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle fill='%23667eea' cx='32' cy='32' r='32'/%3E%3Crect x='16' y='28' width='32' height='20' rx='4' fill='white'/%3E%3Crect x='24' y='20' width='16' height='8' rx='2' fill='white'/%3E%3Crect x='28' y='36' width='8' height='8' rx='2' fill='%23667eea'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
