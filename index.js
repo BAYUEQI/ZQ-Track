@@ -1110,7 +1110,7 @@ const adminPage = `
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="md:col-span-2">
-            <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+            <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">开始日期(00:00:00,UTC+0)</label>
             <div class="relative">
               <input type="text" id="startDate"
                 class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white"
@@ -1135,6 +1135,7 @@ const adminPage = `
                </div>
             </div>
             <div id="startDateLunar" class="lunar-display pl-1"></div>
+            <div id="startDateLocal" class="text-xs text-gray-500 mt-1">选择日期后显示具体时间</div>
           </div>
           
           <div>
@@ -1156,7 +1157,7 @@ const adminPage = `
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-              <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">到期日期 *</label>
+              <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">到期日期(00:00:00,UTC+0)</label>
               <div class="relative">
                 <input type="text" id="expiryDate" required
                   class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white"
@@ -1177,6 +1178,7 @@ const adminPage = `
                 </div>
               </div>
               <div id="expiryDateLunar" class="lunar-display pl-1 mb-1"></div>
+              <div id="expiryDateLocal" class="text-xs text-gray-500 mt-1">选择日期后显示具体时间</div>
               <div class="error-message text-red-500" data-for="expiryDate"></div>
           </div>
 
@@ -1850,7 +1852,16 @@ const lunarBiz = {
         timeZone: globalTimezone,
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      // 用于获取时区偏移的格式化器
+      const timezoneOffsetDtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: globalTimezone,
+        timeZoneName: 'short'
       });
 
       // 使用 DocumentFragment 进行批量插入，减少页面重绘（移动端性能关键）
@@ -1966,7 +1977,30 @@ const lunarBiz = {
           : '';
 
         // 复用外部的 format 对象
-        const expiryDateText = displayDtf.format(new Date(subscription.expiryDate));
+        const expiryDateObj = new Date(subscription.expiryDate);
+        const expiryDateText = displayDtf.format(expiryDateObj);
+        
+        // 计算UTC偏移量并格式化显示
+        const calculateUTCOffset = (date, timezone) => {
+          const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+          const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+          const offsetMinutes = (tzDate - utcDate) / (1000 * 60);
+          const offsetHours = Math.round(offsetMinutes / 60);
+          
+          if (offsetHours === 0) {
+            return 'UTC';
+          } else if (offsetHours > 0) {
+            return 'UTC+' + offsetHours;
+          } else {
+            return 'UTC' + offsetHours;
+          }
+        };
+        
+        // 生成统一的UTC时区显示
+        const timeZoneName = calculateUTCOffset(expiryDateObj, globalTimezone);
+        
+        // 在日期后添加时区信息
+        const expiryDateWithTimezone = expiryDateText + ' (' + timeZoneName + ')';
         const lunarHtml = lunarExpiryText ? createHoverText('农历: ' + lunarExpiryText, 25, 'text-xs text-blue-600 mt-1') : '';
 
         let daysLeftText = '';
@@ -1986,13 +2020,71 @@ const lunarBiz = {
         }
 
         const startDateText = subscription.startDate
-          ? '开始: ' + displayDtf.format(new Date(subscription.startDate)) + (startLunarText ? ' (' + startLunarText + ')' : '')
+          ? (() => {
+              const startDateObj = new Date(subscription.startDate);
+              const startDateFormatted = displayDtf.format(startDateObj);
+              
+              // 计算UTC偏移量并格式化显示
+              const calculateUTCOffset = (date, timezone) => {
+                const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+                const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+                const offsetMinutes = (tzDate - utcDate) / (1000 * 60);
+                const offsetHours = Math.round(offsetMinutes / 60);
+                
+                if (offsetHours === 0) {
+                  return 'UTC';
+                } else if (offsetHours > 0) {
+                  return 'UTC+' + offsetHours;
+                } else {
+                  return 'UTC' + offsetHours;
+                }
+              };
+              
+              // 生成统一的UTC时区显示
+              const startTimeZoneName = calculateUTCOffset(startDateObj, globalTimezone);
+              
+              const startDateWithTimezone = startDateFormatted + ' (' + startTimeZoneName + ')';
+              return '开始: ' + startDateWithTimezone + (startLunarText ? ' (' + startLunarText + ')' : '');
+            })()
           : '';
         const startDateHtml = startDateText ? createHoverText(startDateText, 30, 'text-xs text-gray-500 mt-1') : '';
 
+        // 计算提醒时间
+        let reminderTimeHtml = '';
+        if (reminder.value > 0) {
+          const expiryDateObj = new Date(subscription.expiryDate);
+          const reminderMs = reminder.unit === 'hour' ? reminder.value * 60 * 60 * 1000 : reminder.value * 24 * 60 * 60 * 1000;
+          const reminderDateObj = new Date(expiryDateObj.getTime() - reminderMs);
+          
+          // 格式化提醒时间
+          const reminderTimeText = displayDtf.format(reminderDateObj);
+          
+          // 计算UTC偏移量并格式化显示
+          const calculateUTCOffset = (date, timezone) => {
+            const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+            const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+            const offsetMinutes = (tzDate - utcDate) / (1000 * 60);
+            const offsetHours = Math.round(offsetMinutes / 60);
+            
+            if (offsetHours === 0) {
+              return 'UTC';
+            } else if (offsetHours > 0) {
+              return 'UTC+' + offsetHours;
+            } else {
+              return 'UTC' + offsetHours;
+            }
+          };
+          
+          // 生成统一的UTC时区显示
+          const timeZoneName = calculateUTCOffset(reminderDateObj, globalTimezone);
+          
+          // 拼接提醒时间
+          reminderTimeHtml = '<div class="text-xs text-gray-500 mt-1">提醒时间: ' + reminderTimeText + ' (' + timeZoneName + ')</div>';
+        }
+        
         const reminderExtra = reminder.value === 0
           ? '<div class="text-xs text-gray-500 mt-1">仅到期时提醒</div>'
-          : (reminder.unit === 'hour' ? '<div class="text-xs text-gray-500 mt-1">小时级提醒</div>' : '');
+          : reminderTimeHtml;
         const reminderHtml = '<div><i class="fas fa-bell mr-1"></i>' + reminder.displayText + '</div>' + reminderExtra;
 
         const currencySymbols = {
@@ -2024,7 +2116,7 @@ const lunarBiz = {
             calendarTypeHtml +
           '</div></td>' +
           '<td data-label="到期时间" class="px-4 py-3"><div class="td-content-wrapper">' +
-            '<div class="text-sm text-gray-900">' + expiryDateText + '</div>' +
+            '<div class="text-sm text-gray-900">' + expiryDateWithTimezone + '</div>' +
             lunarHtml +
             '<div class="text-xs text-gray-500 mt-1">' + daysLeftText + '</div>' +
             startDateHtml +
@@ -2775,6 +2867,13 @@ const lunarBiz = {
       document.getElementById('startDate').value = today;
       document.getElementById('category').value = '';
       document.getElementById('reminderValue').value = '7';
+      
+      // 更新开始日期的本地时间显示
+      setTimeout(() => {
+        if (window.startDatePicker && window.startDatePicker.selectedDate) {
+          window.startDatePicker.updateLocalTimeDisplay();
+        }
+      }, 100);
       document.getElementById('reminderUnit').value = 'day';
       document.getElementById('isActive').checked = true;
       document.getElementById('autoRenew').checked = true;
@@ -2782,6 +2881,8 @@ const lunarBiz = {
       loadLunarPreference();
       calculateExpiryDate();
       setupModalEventListeners();
+      
+
     });
 
     // 自定义日期选择器功能
@@ -3008,6 +3109,9 @@ const lunarBiz = {
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
           this.input.value = year + '-' + month + '-' + day;
+          
+          // 更新具体时间显示
+          this.updateLocalTimeDisplay();
         }
         this.hide();
         
@@ -3015,7 +3119,117 @@ const lunarBiz = {
         if (this.input) {
           const event = new Event('change', { bubbles: false });
           this.input.dispatchEvent(event);
+          
+
         }
+      }
+      
+      // 更新本地时间显示
+      updateLocalTimeDisplay() {
+        if (!this.input || !this.selectedDate) {
+          return;
+        }
+        
+        // 获取对应的本地时间显示元素
+        const localTimeElementId = this.input.id + 'Local';
+        const localTimeElement = document.getElementById(localTimeElementId);
+        if (!localTimeElement) {
+          return;
+        }
+        
+        // 获取全局时区设置（优先使用全局变量，如果没有则从localStorage获取）
+        const globalTimezone = window.globalTimezone || localStorage.getItem('timezone') || 'UTC';
+        
+        // 将选择的日期视为UTC+0的00:00:00，计算对应时区的时间
+        const year = this.selectedDate.getFullYear();
+        const month = this.selectedDate.getMonth();
+        const day = this.selectedDate.getDate();
+        
+        // 创建UTC时间对象（UTC+0的00:00:00）
+        const utcDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        
+        // 直接使用Intl.DateTimeFormat来格式化UTC时间为目标时区的时间
+        const displayDtf = new Intl.DateTimeFormat('zh-CN', {
+          timeZone: globalTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
+        // 格式化日期时间
+        const formattedDateTime = displayDtf.format(utcDate);
+        
+        // 计算时区偏移量并格式化显示
+        const calculateUTCOffset = (timezone) => {
+          try {
+            // 创建两个日期对象，一个是UTC，一个是目标时区
+            const date = new Date('2020-01-01T12:00:00Z'); // 使用固定日期避免夏令时影响
+            
+            // 格式化日期为目标时区的时间
+            const tzFormatter = new Intl.DateTimeFormat('en', {
+              timeZone: timezone,
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+            
+            // 格式化日期为UTC的时间
+            const utcFormatter = new Intl.DateTimeFormat('en', {
+              timeZone: 'UTC',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+            
+            // 获取目标时区的时间部分
+            const tzParts = tzFormatter.formatToParts(date);
+            const tzHour = parseInt(tzParts.find(p => p.type === 'hour').value);
+            const tzMinute = parseInt(tzParts.find(p => p.type === 'minute').value);
+            
+            // 获取UTC的时间部分
+            const utcParts = utcFormatter.formatToParts(date);
+            const utcHour = parseInt(utcParts.find(p => p.type === 'hour').value);
+            const utcMinute = parseInt(utcParts.find(p => p.type === 'minute').value);
+            
+            // 计算偏移量（分钟）
+            let offsetMinutes = (tzHour - utcHour) * 60 + (tzMinute - utcMinute);
+            
+            // 调整跨日的情况
+            if (offsetMinutes > 720) offsetMinutes -= 1440;
+            if (offsetMinutes < -720) offsetMinutes += 1440;
+            
+            // 转换为小时
+            const offsetHours = Math.round(offsetMinutes / 60);
+            
+            // 格式化显示
+            if (offsetHours === 0) {
+              return 'UTC';
+            } else if (offsetHours > 0) {
+              return 'UTC+' + offsetHours;
+            } else {
+              return 'UTC' + offsetHours;
+            }
+          } catch (error) {
+            // 如果计算失败，返回UTC
+            return 'UTC';
+          }
+        };
+        
+        // 获取时区显示
+        const timeZoneDisplay = calculateUTCOffset(globalTimezone);
+        
+        // 生成时间显示
+        const displayText = '对应时间: ' + formattedDateTime + ' (' + timeZoneDisplay + ')';
+        
+        // 强制更新显示
+        localTimeElement.textContent = '';
+        setTimeout(() => {
+          localTimeElement.textContent = displayText;
+        }, 10);
       }
 
       syncFromInputValue() {
@@ -3050,6 +3264,11 @@ const lunarBiz = {
         this.selectedDate = parsed;
         this.currentDate = new Date(parsed);
         this.render();
+        
+        // 延迟更新本地时间显示，确保时区设置已加载
+        setTimeout(() => {
+          this.updateLocalTimeDisplay();
+        }, 200);
 
         const event = new Event('change', { bubbles: false });
         this.input.dispatchEvent(event);
@@ -3424,8 +3643,17 @@ const lunarBiz = {
 		}
 		document.getElementById('expiryDate').value = expiry.toISOString().split('T')[0];
 		console.log('start:', start);
-		console.log('expiry:', expiry);
-		console.log('expiryDate:', document.getElementById('expiryDate').value);
+        console.log('expiry:', expiry);
+        console.log('expiryDate:', document.getElementById('expiryDate').value);
+        
+        // 更新到期日期的本地时间显示和提醒时间
+        setTimeout(() => {
+          if (window.expiryDatePicker && window.expiryDatePicker.selectedDate) {
+            window.expiryDatePicker.updateLocalTimeDisplay();
+          }
+          
+
+        }, 50);
 	  }
 
 	  // 更新农历显示
@@ -3524,6 +3752,19 @@ const lunarBiz = {
           document.getElementById('autoRenew').checked = subscription.autoRenew !== false;
           document.getElementById('startDate').value = subscription.startDate ? subscription.startDate.split('T')[0] : '';
           document.getElementById('expiryDate').value = subscription.expiryDate ? subscription.expiryDate.split('T')[0] : '';
+          
+          // 更新开始日期和到期日期的本地时间显示
+          setTimeout(() => {
+            if (window.startDatePicker && window.startDatePicker.selectedDate) {
+              window.startDatePicker.updateLocalTimeDisplay();
+            }
+            
+            if (window.expiryDatePicker && window.expiryDatePicker.selectedDate) {
+              window.expiryDatePicker.updateLocalTimeDisplay();
+            }
+            
+
+          }, 100);
           document.getElementById('periodValue').value = subscription.periodValue || 1;
           document.getElementById('periodUnit').value = subscription.periodUnit || 'month';
           const reminderUnit = subscription.reminderUnit || (subscription.reminderHours !== undefined ? 'hour' : 'day');
@@ -3609,6 +3850,8 @@ const lunarBiz = {
     
     // 全局时区配置
     let globalTimezone = 'UTC';
+    // 暴露到window对象，确保所有模块都能访问
+    window.globalTimezone = globalTimezone;
     
     // 检测时区更新
     function checkTimezoneUpdate() {
@@ -3640,6 +3883,7 @@ const lunarBiz = {
         const response = await fetch('/api/config');
         const config = await response.json();
         globalTimezone = config.TIMEZONE || 'UTC';
+        window.globalTimezone = globalTimezone;
         
         // 格式化当前时间
         function formatTime(dt, tz) {
@@ -4407,6 +4651,7 @@ const configPage = `
           
           // 更新全局时区并重新显示时间
           globalTimezone = config.TIMEZONE;
+          window.globalTimezone = globalTimezone;
           showSystemTime();
           
           // 标记时区已更新，供其他页面检测
