@@ -6551,7 +6551,7 @@ async function testSingleSubscriptionNotification(id, env) {
 
     // 格式化到期日期（使用所选时区）
     const timezone = config?.TIMEZONE || 'UTC';
-    const formattedExpiryDate = formatTimeInTimezone(new Date(subscription.expiryDate), timezone, 'date');
+    const formattedExpiryDate = formatTimeInTimezone(new Date(subscription.expiryDate), timezone, 'datetime');
     const currentTime = formatTimeInTimezone(new Date(), timezone, 'datetime');
     
     // 获取日历类型和自动续期状态
@@ -6832,7 +6832,7 @@ function formatNotificationContent(subscriptions, config) {
 
     // 格式化到期日期（使用所选时区）
     const expiryDateObj = new Date(sub.expiryDate);
-    const formattedExpiryDate = formatTimeInTimezone(expiryDateObj, timezone, 'date');
+    const formattedExpiryDate = formatTimeInTimezone(expiryDateObj, timezone, 'datetime');
     
     // 农历日期
     let lunarExpiryText = '';
